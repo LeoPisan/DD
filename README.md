@@ -1,4 +1,4 @@
-# Guilded Dice Bot
+# DD
 
  
 Hello there! I am a dice rolling bot. 🎲
