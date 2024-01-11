@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "guilded-dice-roll-bot",
   "description": "Dice roll bot",
   "license": "UNLICENSED",

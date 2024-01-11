@@ -1,6 +1,6 @@
-const http = require('http');
-const WebSocket = require('ws');
-const fetch = require('node-fetch');
+import http from 'http';
+import WebSocket from 'ws';
+import fetch from 'node-fetch';
 
 /**
  * Server
@@ -26,6 +26,28 @@ const WS_URL = 'wss://www.guilded.gg/websocket/v1';
 const GUILDED_BASE_URL = 'https://www.guilded.gg/api/v1';
 
 let reconnectTimer = null;
+
+function pingCommand(channelId, timeSent) {
+    console.log('trying to send the response to the ping command');
+    sendMessage(channelId, makePingRespond(timeSent))
+        .then(messageId => {
+            console.log(messageId)
+        })
+        .catch(error => console.error('Error sending the message: ', error));
+}
+
+/**
+ * Make the string response for the ping command
+ * @param timeSent Time when the command was made
+ * @returns {string} The response that should be sent
+ */
+function makePingRespond(timeSent) {
+    let res = 'Pong !\n'
+    let delay = new Date() - timeSent;
+    res += `\`\`\`${delay}\`\`\``;
+    console.log(`Message for the ping command ${res} made`);
+    return res;
+}
 
 function connect() {
     const socket = new WebSocket(WS_URL, {
@@ -86,7 +108,9 @@ function connect() {
         }
 
         if (eventType === 'ChatMessageCreated') {
-            const {message: {id: messageId, content, channelId}} = eventData;
+            const {message: {id: messageId, content, channelId, createdAt}} = eventData;
+            console.log(`message sent at: ${createdAt}`);
+            const timeSent = new Date(createdAt);
             let input = content;
             let messageContent = input.toLowerCase();
             const regex = /,/ig;
@@ -117,6 +141,10 @@ function connect() {
                         .then((response) => {
                             // console.log('response: ', response);
                         });
+                }
+                if (messageContent === '!dping') {
+                    console.log('handle the ping command');
+                    pingCommand(channelId, timeSent);
                 }
                 if (messageContent === '!d0') {
                     const index = Math.floor(Math.random() * D_ZERO_MESSAGES.length);
@@ -338,4 +366,23 @@ async function iterateUpdateMessages(messageArray, channelId, messageId, startMe
                 iterateUpdateMessages(messageArray, channelId, messageId, newMessage, token, next);
             }
         })
+}
+
+/**
+ * Sends a message to a specific channel.
+ * @param {string} channelId - The identifier of the channel to send the message to.
+ * @param {string} messageContent - The content of the message to send.
+ * @returns {Promise<string>} - A promise resolved with the ID of the sent message.
+ */
+function sendMessage(channelId, messageContent) {
+    console.log("trying to send a message");
+    const response = fetch(`${GUILDED_BASE_URL}/channels/${channelId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({"content": messageContent}),
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    });
 }
